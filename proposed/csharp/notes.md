@@ -1,22 +1,46 @@
 # C# Support Notes
 
-## Status
-- Stub files created
-- Awaiting real implementation inside Understand-Anything core
+## Current Status (June 2026)
+- Improved `queries.scm` with rich definitions and references
+- Ready for integration testing inside Understand-Anything core
 
-## Key Challenges
-- Handling partial classes and partial methods
-- Good support for attributes and decorators
-- Async/await and Task patterns
-- LINQ and expression trees (may be treated as complex calls)
-- .NET project file integration (.csproj) for better dependency graphs
+## Framework Detection Ideas
 
-## Recommended Next Steps
-1. Verify `tree-sitter-c-sharp` WASM loads correctly in the plugin
-2. Expand queries.scm with more comprehensive patterns from the grammar
-3. Add framework detectors for ASP.NET Core, Blazor, Minimal APIs, etc.
-4. Test on real-world repositories (e.g., ASP.NET samples, eShop, etc.)
+C# / .NET has strong convention-based and attribute-based frameworks. We can detect:
 
-## Resources
-- tree-sitter-c-sharp: https://github.com/tree-sitter/tree-sitter-c-sharp
-- Understand-Anything core package location (in original repo)
+- **Web API / Minimal APIs**: Presence of `[ApiController]`, `MapGet`/`MapPost`, or `WebApplication` patterns
+- **Blazor**: `.razor` files + `@page`, `ComponentBase`
+- **ASP.NET Core MVC**: Controllers inheriting from `Controller` or `ControllerBase`
+- **Entity Framework**: `DbContext`, `DbSet<>`, `[Key]`, migrations
+- **Dependency Injection**: Heavy use of `IServiceCollection`, `AddScoped`, etc.
+- **gRPC / SignalR**: Specific package + attribute patterns
+
+**Implementation approach**:
+- Add a `frameworkDetectors` array in `LanguageConfig`
+- Or post-process the extracted graph looking for specific types/attributes (cheaper than full static analysis)
+
+## Project File Parsing (.csproj / .fsproj)
+
+.csproj files are MSBuild XML. Options:
+
+1. **Reuse existing XML parser** + custom post-processor for `<ItemGroup>`, `<PackageReference>`, `<ProjectReference>`
+2. **Add dedicated MSBuild parser** (similar to how Terraform or Protobuf have custom parsers)
+3. **Simple regex / XML DOM** for key elements during scanning phase
+
+Recommended starting point: Extend the existing XML handling to extract:
+- Target framework (`<TargetFramework>`)
+- Package references (for dependency graph)
+- Project references (for solution-level understanding)
+
+This would significantly improve cross-project understanding in large .NET solutions.
+
+## Testing Recommendations
+- Small console app + class library
+- ASP.NET Core Web API sample
+- Blazor Server / WASM app
+- Real internal codebase if available
+
+## Open Questions
+- How to best merge partial classes across files?
+- Should we model dependency injection graphs explicitly?
+- Performance impact of deeper attribute scanning
